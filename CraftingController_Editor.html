@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CraftingController Editor</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#171c23; --panel2:#1e252e; --line:#2b333d;
+  --text:#e7edf3; --muted:#9aa7b4; --accent:#4cc2ff; --good:#3ddc84;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;color:var(--text);
+  background:radial-gradient(1200px 700px at 80% -10%,#182430,var(--bg) 55%);
+  font:14px/1.45 Inter,system-ui,Segoe UI,Arial,sans-serif;
+}
+header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(15,18,22,.92);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+  padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+}
+h1{font-size:18px;margin:0}
+h1 span{color:var(--accent)}
+.btn{
+  border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:600;
+}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:linear-gradient(180deg,#2b8fd8,#1f6fae);border-color:#2b8fd8}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input,select{
+  background:#0d1116;border:1px solid var(--line);color:var(--text);
+  border-radius:8px;padding:8px 10px;outline:none;
+}
+input:focus,select:focus{border-color:var(--accent)}
+main{max-width:1450px;margin:20px auto;padding:0 18px 90px}
+.card{
+  background:linear-gradient(180deg,var(--panel),#141920);
+  border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px;
+}
+h2{margin:0 0 4px;font-size:16px}
+.sub{margin:0 0 16px;color:var(--muted);font-size:12.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.field{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+.field input{width:100%}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.toggle{position:relative;width:46px;height:25px;flex:none}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#39424d;border-radius:99px;transition:.18s}
+.slider:before{
+  content:"";position:absolute;height:19px;width:19px;left:3px;top:3px;
+  background:#cfd8e3;border-radius:50%;transition:.18s;
+}
+.toggle input:checked + .slider{background:var(--good)}
+.toggle input:checked + .slider:before{transform:translateX(21px);background:#08240f}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.toolbar input[type=search]{min-width:250px;flex:1}
+.pill{
+  font-size:12px;color:var(--muted);background:var(--panel2);
+  border:1px solid var(--line);padding:6px 10px;border-radius:99px;
+}
+table{width:100%;border-collapse:separate;border-spacing:0 6px}
+th{
+  font-size:11px;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--muted);text-align:left;padding:0 10px 6px;
+}
+td{
+  background:var(--panel2);border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:middle;
+}
+tr td:first-child{border-left:1px solid var(--line);border-radius:10px 0 0 10px}
+tr td:last-child{border-right:1px solid var(--line);border-radius:0 10px 10px 0}
+td input{width:100%;min-width:70px}
+td input[type=number]{width:84px}
+.itemcell{display:flex;align-items:center;gap:12px}
+.icon{
+  width:48px;height:48px;flex:none;border-radius:8px;background:#0b0f14;
+  border:1px solid var(--line);object-fit:contain;padding:3px;
+}
+.itemname{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfe6f7;
+}
+.itemsub{color:var(--muted);font-size:11.5px;margin-top:2px}
+.catSelect{
+  min-width:130px;font-size:12px;font-weight:600;
+  background:#0d1116;border:1px solid var(--line);color:var(--text);
+  border-radius:8px;padding:6px 8px;
+}
+.badge{
+  display:inline-block;font-size:11px;padding:3px 8px;border-radius:99px;
+  border:1px solid var(--line);color:var(--muted);cursor:pointer;user-select:none;
+}
+.badge.on{color:#0b2b16;background:var(--good);border-color:var(--good);font-weight:700}
+.badge.off{color:#ffb3b3;background:#3a2226;border-color:#5b3138}
+.empty{text-align:center;color:var(--muted);padding:50px 10px}
+footer{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(15,18,22,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);padding:10px 18px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.toast{
+  position:fixed;right:18px;bottom:70px;background:#12311f;
+  border:1px solid var(--good);color:#c9f7d9;padding:10px 14px;
+  border-radius:10px;opacity:0;transition:.25s;pointer-events:none;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Crafting<span>Controller</span> Editor</h1>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <button class="btn" onclick="document.getElementById('file').click()">Open JSON</button>
+  <button class="btn primary" id="save" disabled>Download edited JSON</button>
+  <span class="pill" id="status">No file loaded</span>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Global settings</h2>
+    <p class="sub">Server-wide crafting configuration.</p>
+    <div class="grid" id="globalFields"></div>
+  </section>
+
+  <section class="card">
+    <h2>Advanced item options</h2>
+    <p class="sub">
+      Click YES/NO and ON/OFF badges to toggle values. Categories use Rust’s official item categories where available;
+      you can override any category locally.
+    </p>
+
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search item shortname… e.g. rifle, metal, wall">
+      <select id="categoryFilter">
+        <option value="all">All categories</option>
+      </select>
+      <select id="sortMode">
+        <option value="category-alpha">Category → A-Z</option>
+        <option value="alpha">Alphabetical A-Z</option>
+        <option value="alpha-desc">Alphabetical Z-A</option>
+        <option value="craft-time-asc">Craft time: low → high</option>
+        <option value="craft-time-desc">Craft time: high → low</option>
+        <option value="workbench-asc">Workbench level: low → high</option>
+        <option value="workbench-desc">Workbench level: high → low</option>
+        <option value="craftable-first">Craftable first</option>
+        <option value="not-craftable-first">Not craftable first</option>
+        <option value="researchable-first">Researchable first</option>
+        <option value="custom-time-first">Custom craft time first</option>
+      </select>
+      <span class="pill" id="count">0 items</span>
+      <button class="btn" id="expand">Show more</button>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:310px">Item</th>
+            <th>Category</th>
+            <th>Craft</th>
+            <th>Research</th>
+            <th>Custom time</th>
+            <th>Craft time</th>
+            <th>Workbench</th>
+            <th>Skin ID</th>
+          </tr>
+        </thead>
+        <tbody id="items"></tbody>
+      </table>
+      <div class="empty" id="empty">Open a CraftingController.json file to begin.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span class="pill" id="dirty">No unsaved indicator — use Download after editing</span>
+  <button class="btn primary" id="save2" disabled>Download edited JSON</button>
+</footer>
+
+<div class="toast" id="toast">Saved</div>
+
+<script>
+let data = null;
+let shown = 150;
+
+const $ = s => document.querySelector(s);
+
+/* ---------------------------------------------------------
+   Official Rust item categories
+--------------------------------------------------------- */
+
+const ITEM_DB_URL =
+  "https://raw.githubusercontent.com/SzyMig/Rust-item-list-JSON/main/Rust-Items.json";
+
+const CATEGORY_ORDER = [
+  "Ammunition",
+  "Attire",
+  "Construction",
+  "Electrical",
+  "Food",
+  "Items",
+  "Misc",
+  "Component",
+  "Resources",
+  "Tool",
+  "Traps",
+  "Weapon",
+  "Fun"
+];
+
+const fallbackCategories = {
+  "ammo.": "Ammunition",
+  "arrow.": "Ammunition",
+  "rocket.": "Ammunition",
+
+  "hat.": "Attire",
+  "mask.": "Attire",
+  "pants": "Attire",
+  "shirt.": "Attire",
+  "shoes.": "Attire",
+  "boots.": "Attire",
+  "jacket": "Attire",
+  "hoodie": "Attire",
+  "attire.": "Attire",
+
+  "door.": "Construction",
+  "wall.": "Construction",
+  "floor.": "Construction",
+  "foundation": "Construction",
+  "window": "Construction",
+  "stairs": "Construction",
+  "roof": "Construction",
+  "gate": "Construction",
+  "fence": "Construction",
+
+  "electric.": "Electrical",
+  "switch": "Electrical",
+  "sensor": "Electrical",
+  "timer": "Electrical",
+  "battery": "Electrical",
+  "solar": "Electrical",
+  "cable": "Electrical",
+  "wire": "Electrical",
+
+  "food": "Food",
+  "berry": "Food",
+  "meat": "Food",
+  "seed.": "Food",
+  "water": "Food",
+  "apple": "Food",
+  "corn": "Food",
+  "potato": "Food",
+  "pumpkin": "Food",
+
+  "gears": "Component",
+  "metalpipe": "Component",
+  "metalblade": "Component",
+  "sewingkit": "Component",
+  "sheetmetal": "Component",
+  "riflebody": "Component",
+  "smgbody": "Component",
+  "semibody": "Component",
+
+  "wood": "Resources",
+  "stone": "Resources",
+  "metal.": "Resources",
+  "sulfur": "Resources",
+  "scrap": "Resources",
+  "cloth": "Resources",
+  "leather": "Resources",
+
+  "trap.": "Traps",
+  "spikes.": "Traps",
+  "mine": "Traps",
+  "turret": "Traps",
+
+  "rifle": "Weapon",
+  "pistol": "Weapon",
+  "smg": "Weapon",
+  "shotgun": "Weapon",
+  "bow": "Weapon",
+  "crossbow": "Weapon",
+  "knife": "Weapon",
+
+  "hammer": "Tool",
+  "pickaxe": "Tool",
+  "axe": "Tool",
+  "jackhammer": "Tool",
+  "chainsaw": "Tool"
+};
+
+let officialCategories = {};
+let manualCategories =
+  JSON.parse(localStorage.getItem("ccCategoryOverrides") || "{}");
+
+async function loadOfficialCategories(){
+  try{
+    const cached = localStorage.getItem("ccOfficialCategories");
+
+    if(cached){
+      officialCategories = JSON.parse(cached);
+      return;
+    }
+
+    const response = await fetch(ITEM_DB_URL);
+    const database = await response.json();
+
+    officialCategories = {};
+
+    database.forEach(item=>{
+      if(item.shortname && item.Category){
+        officialCategories[item.shortname] = item.Category;
+      }
+    });
+
+    localStorage.setItem(
+      "ccOfficialCategories",
+      JSON.stringify(officialCategories)
+    );
+  }catch(err){
+    console.warn("Could not load official Rust categories; using fallback.", err);
+  }
+}
+
+function categoryOf(shortname){
+  if(manualCategories[shortname]) return manualCategories[shortname];
+  if(officialCategories[shortname]) return officialCategories[shortname];
+
+  const s = shortname.toLowerCase();
+
+  for(const [prefix, category] of Object.entries(fallbackCategories)){
+    if(s.startsWith(prefix) || s.includes(prefix)){
+      return category;
+    }
+  }
+
+  return "Misc";
+}
+
+function setManualCategory(shortname, category){
+  if(category){
+    manualCategories[shortname] = category;
+  }else{
+    delete manualCategories[shortname];
+  }
+
+  localStorage.setItem(
+    "ccCategoryOverrides",
+    JSON.stringify(manualCategories)
+  );
+
+  buildCategoryFilter();
+  renderItems();
+}
+
+/* ---------------------------------------------------------
+   Global settings
+--------------------------------------------------------- */
+
+const globalSpec = [
+  {
+    key: "Default crafting rate multiplier 0 = Instant, 1 = Default, 2 = 2x speed",
+    label: "Default crafting rate multiplier",
+    type: "number",
+    step: "0.1",
+    hint: "0 = instant, 1 = default, 2 = 2× speed"
+  },
+  {
+    key: "Save commands to config (save config changes via command to the configuration)",
+    label: "Save commands to config",
+    type: "bool"
+  },
+  {
+    key: "Simple Mode (disables: instant bulk craft, skin options and full inventory checks for better performance)",
+    label: "Simple Mode",
+    type: "bool"
+  },
+  {
+    key: "Allow crafting when inventory is full",
+    label: "Allow crafting when inventory is full",
+    type: "bool"
+  },
+  {
+    key: "Complete crafting on server shut down",
+    label: "Complete crafting on server shutdown",
+    type: "bool"
+  },
+  {
+    key: "Craft items with random skins if not already skinned",
+    label: "Random skins if unskinned",
+    type: "bool"
+  },
+  {
+    key: "Show Crafting Notes",
+    label: "Show crafting notes",
+    type: "bool"
+  }
+];
+
+function toast(message){
+  const t = $("#toast");
+  t.textContent = message;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1800);
+}
+
+function markDirty(){
+  $("#dirty").textContent = "● Unsaved changes — download to keep them";
+}
+
+$("#file").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = ()=>{
+    try{
+      data = JSON.parse(reader.result);
+      build();
+    }catch(err){
+      alert("Invalid JSON: " + err.message);
+    }
+  };
+
+  reader.readAsText(file);
+});
+
+function build(){
+  shown = 150;
+  $("#globalFields").innerHTML = "";
+
+  globalSpec.forEach(spec=>{
+    const value = data[spec.key];
+    const div = document.createElement("div");
+    div.className = "field";
+
+    if(spec.type === "bool"){
+      div.innerHTML = `
+        <div class="switch">
+          <div><label>${spec.label}</label></div>
+          <label class="toggle">
+            <input type="checkbox" ${value ? "checked" : ""}>
+            <span class="slider"></span>
+          </label>
+        </div>
+      `;
+
+      div.querySelector("input").onchange = e=>{
+        data[spec.key] = e.target.checked;
+        markDirty();
+      };
+    }else{
+      div.innerHTML = `
+        <label>${spec.label}</label>
+        <input type="number" step="${spec.step}" value="${value}">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">
+          ${spec.hint || ""}
+        </div>
+      `;
+
+      div.querySelector("input").oninput = e=>{
+        data[spec.key] = parseFloat(e.target.value) || 0;
+        markDirty();
+      };
+    }
+
+    $("#globalFields").appendChild(div);
+  });
+
+  const vip =
+    data["Crafting rate bonus mulitplier (apply oxide perms for additional mulitpliers"];
+
+  if(vip && typeof vip === "object"){
+    Object.entries(vip).forEach(([permission, value])=>{
+      const div = document.createElement("div");
+      div.className = "field";
+
+      div.innerHTML = `
+        <label>VIP multiplier: ${permission}</label>
+        <input type="number" step="0.1" value="${value}">
+      `;
+
+      div.querySelector("input").oninput = e=>{
+        vip[permission] = parseFloat(e.target.value) || 0;
+        markDirty();
+      };
+
+      $("#globalFields").appendChild(div);
+    });
+  }
+
+  buildCategoryFilter();
+
+  const itemCount =
+    Object.keys(data["Advanced Crafting Options"] || {}).length;
+
+  $("#status").textContent = `Loaded ${itemCount} item entries`;
+  $("#save").disabled = false;
+  $("#save2").disabled = false;
+
+  renderItems();
+}
+
+/* ---------------------------------------------------------
+   Category filtering and sorting
+--------------------------------------------------------- */
+
+function buildCategoryFilter(){
+  const items = data["Advanced Crafting Options"] || {};
+
+  const categories = [...new Set(Object.keys(items).map(categoryOf))]
+    .sort((a,b)=>{
+      const ia = CATEGORY_ORDER.indexOf(a);
+      const ib = CATEGORY_ORDER.indexOf(b);
+
+      return (
+        (ia === -1 ? 99 : ia) -
+        (ib === -1 ? 99 : ib)
+      ) || a.localeCompare(b);
+    });
+
+  const select = $("#categoryFilter");
+  const current = select.value || "all";
+
+  select.innerHTML =
+    `<option value="all">All categories</option>` +
+    categories
+      .map(c=>`<option value="${c}">${c}</option>`)
+      .join("");
+
+  select.value = categories.includes(current) ? current : "all";
+}
+
+function iconURL(shortname){
+  return `https://rustlabs.com/img/items180/${encodeURIComponent(shortname)}.png`;
+}
+
+function passesFilter(shortname, item, category){
+  const query = $("#search").value.trim().toLowerCase();
+
+  if(query && !shortname.toLowerCase().includes(query)){
+    return false;
+  }
+
+  const selectedCategory = $("#categoryFilter").value;
+
+  if(selectedCategory !== "all" && category !== selectedCategory){
+    return false;
+  }
+
+  const sortMode = $("#sortMode").value;
+
+  if(sortMode === "craftable-first" && !item.canCraft) return false;
+  if(sortMode === "not-craftable-first" && item.canCraft) return false;
+  if(sortMode === "researchable-first" && !item.canResearch) return false;
+  if(sortMode === "custom-time-first" && !item.useCustomCraftTime) return false;
+
+  return true;
+}
+
+function sortKeys(keys, items, categories){
+  const mode = $("#sortMode").value;
+  const alphabetical = (a,b)=>a.localeCompare(b);
+
+  if(mode === "alpha"){
+    return keys.sort(alphabetical);
+  }
+
+  if(mode === "alpha-desc"){
+    return keys.sort((a,b)=>b.localeCompare(a));
+  }
+
+  if(mode.startsWith("craft-time")){
+    return keys.sort((a,b)=>{
+      const difference =
+        items[a].craftTime - items[b].craftTime;
+
+      return mode.endsWith("desc")
+        ? -difference || alphabetical(a,b)
+        : difference || alphabetical(a,b);
+    });
+  }
+
+  if(mode.startsWith("workbench")){
+    return keys.sort((a,b)=>{
+      const difference =
+        items[a].workbenchLevel - items[b].workbenchLevel;
+
+      return mode.endsWith("desc")
+        ? -difference || alphabetical(a,b)
+        : difference || alphabetical(a,b);
+    });
+  }
+
+  if(mode === "craftable-first"){
+    return keys.sort((a,b)=>
+      (items[b].canCraft - items[a].canCraft) || alphabetical(a,b)
+    );
+  }
+
+  if(mode === "not-craftable-first"){
+    return keys.sort((a,b)=>
+      (items[a].canCraft - items[b].canCraft) || alphabetical(a,b)
+    );
+  }
+
+  if(mode === "researchable-first"){
+    return keys.sort((a,b)=>
+      (items[b].canResearch - items[a].canResearch) || alphabetical(a,b)
+    );
+  }
+
+  if(mode === "custom-time-first"){
+    return keys.sort((a,b)=>
+      (items[b].useCustomCraftTime - items[a].useCustomCraftTime) ||
+      alphabetical(a,b)
+    );
+  }
+
+  return keys.sort((a,b)=>
+    categories[a].localeCompare(categories[b]) || alphabetical(a,b)
+  );
+}
+
+/* ---------------------------------------------------------
+   Item table
+--------------------------------------------------------- */
+
+function renderItems(){
+  const items = data?.["Advanced Crafting Options"] || {};
+  const allKeys = Object.keys(items);
+
+  const categories = {};
+  allKeys.forEach(key=>{
+    categories[key] = categoryOf(key);
+  });
+
+  let keys = allKeys.filter(key=>
+    passesFilter(key, items[key], categories[key])
+  );
+
+  keys = sortKeys(keys, items, categories);
+
+  $("#count").textContent =
+    `${keys.length} matching / ${allKeys.length} total`;
+
+  $("#empty").style.display = keys.length ? "none" : "block";
+  $("#items").innerHTML = "";
+
+  keys.slice(0, shown).forEach(key=>{
+    const item = items[key];
+    const category = categories[key];
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        <div class="itemcell">
+          <img class="icon" loading="lazy"
+               src="${iconURL(key)}"
+               onerror="this.style.visibility='hidden'">
+          <div>
+            <div class="itemname">${key}</div>
+            <div class="itemsub">Advanced crafting entry</div>
+          </div>
+        </div>
+      </td>
+
+      <td>
+        <select class="catSelect" data-short="${key}">
+          ${[...new Set(CATEGORY_ORDER)]
+            .map(c=>`
+              <option value="${c}" ${c === category ? "selected" : ""}>
+                ${c}
+              </option>
+            `)
+            .join("")}
+        </select>
+      </td>
+
+      <td>
+        <span class="badge ${item.canCraft ? "on" : "off"}">
+          ${item.canCraft ? "YES" : "NO"}
+        </span>
+      </td>
+
+      <td>
+        <span class="badge ${item.canResearch ? "on" : "off"}">
+          ${item.canResearch ? "YES" : "NO"}
+        </span>
+      </td>
+
+      <td>
+        <span class="badge ${item.useCustomCraftTime ? "on" : "off"}">
+          ${item.useCustomCraftTime ? "ON" : "OFF"}
+        </span>
+      </td>
+
+      <td>
+        <input type="number" step="0.1" value="${item.craftTime}">
+      </td>
+
+      <td>
+        <input type="number" min="0" step="1" value="${item.workbenchLevel}">
+      </td>
+
+      <td>
+        <input type="number" step="1" value="${item.defaultskinid}">
+      </td>
+    `;
+
+    const badges = tr.querySelectorAll(".badge");
+    const numbers = tr.querySelectorAll("input[type=number]");
+
+    badges[0].onclick = ()=>{
+      item.canCraft = !item.canCraft;
+      badges[0].textContent = item.canCraft ? "YES" : "NO";
+      badges[0].className = "badge " + (item.canCraft ? "on" : "off");
+      markDirty();
+    };
+
+    badges[1].onclick = ()=>{
+      item.canResearch = !item.canResearch;
+      badges[1].textContent = item.canResearch ? "YES" : "NO";
+      badges[1].className = "badge " + (item.canResearch ? "on" : "off");
+      markDirty();
+    };
+
+    badges[2].onclick = ()=>{
+      item.useCustomCraftTime = !item.useCustomCraftTime;
+      badges[2].textContent = item.useCustomCraftTime ? "ON" : "OFF";
+      badges[2].className = "badge " + (item.useCustomCraftTime ? "on" : "off");
+      markDirty();
+    };
+
+    numbers[0].oninput = e=>{
+      item.craftTime = parseFloat(e.target.value) || 0;
+      markDirty();
+    };
+
+    numbers[1].oninput = e=>{
+      item.workbenchLevel = parseInt(e.target.value) || 0;
+      markDirty();
+    };
+
+    numbers[2].oninput = e=>{
+      item.defaultskinid = parseInt(e.target.value) || 0;
+      markDirty();
+    };
+
+    tr.querySelector(".catSelect").onchange = e=>{
+      setManualCategory(key, e.target.value);
+    };
+
+    $("#items").appendChild(tr);
+  });
+
+  $("#expand").style.display =
+    keys.length > shown ? "inline-block" : "none";
+}
+
+$("#search").oninput = ()=>{
+  shown = 150;
+  renderItems();
+};
+
+$("#categoryFilter").onchange = ()=>{
+  shown = 150;
+  renderItems();
+};
+
+$("#sortMode").onchange = ()=>{
+  shown = 150;
+  renderItems();
+};
+
+$("#expand").onclick = ()=>{
+  shown += 200;
+  renderItems();
+};
+
+/* ---------------------------------------------------------
+   Export
+--------------------------------------------------------- */
+
+function download(){
+  if(!data) return;
+
+  const blob = new Blob(
+    [JSON.stringify(data, null, 2)],
+    {type:"application/json"}
+  );
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "CraftingController.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  toast("Edited JSON downloaded");
+  $("#dirty").textContent = "✔ Changes exported";
+}
+
+$("#save").onclick = download;
+$("#save2").onclick = download;
+
+/* ---------------------------------------------------------
+   Startup
+--------------------------------------------------------- */
+
+loadOfficialCategories().then(()=>{
+  if(data){
+    buildCategoryFilter();
+    renderItems();
+  }
+});
+</script>
+</body>
+</html>
